@@ -58,7 +58,8 @@ public class topKCW {
         }
     }
 
-    public static class SFMapper
+    /*
+        public static class SFMapper
             extends Mapper<Object, Text, Text, Text>{
         private TreeMap<Integer, String> tmap = new TreeMap<Integer, String>();
 
@@ -85,7 +86,6 @@ public class topKCW {
     public static class SFReducer
             extends Reducer<Text,Text,Text,Text> {
         private TreeMap<Integer, String> tmap2 = new TreeMap<Integer, String>();
-
         public void reduce(Text key, Iterable<Text> values,
                            Context context
         ) throws IOException, InterruptedException {
@@ -108,6 +108,39 @@ public class topKCW {
                 Integer count = -1 * entry.getKey();
                 String name = entry.getValue();
                 context.write(new Text(Integer.toString(count)), new Text(name));
+            }
+        }
+    }
+
+    */
+
+
+    public static class SFMapper
+            extends Mapper<Object, Text, IntWritable, Text>{
+        public void map(Object key, Text value, Context context
+        ) throws IOException, InterruptedException {
+            String[] tokens = value.toString().split("\t");
+            String word = tokens[0];
+            int count = -1 * Integer.parseInt(tokens[1]);
+            context.write(new IntWritable(count), new Text(word));
+        }
+    }
+
+    public static class SFReducer
+            extends Reducer<IntWritable,Text,Text,Text> {
+        int ctr = 0;
+        public void reduce(IntWritable key, Iterable<Text> values,
+                           Context context
+        ) throws IOException, InterruptedException {
+            String word;
+            int count = -1 * key.get();
+
+            for (Text val : values) {
+                word = val.toString();
+                if (ctr < 20) {
+                    context.write(new Text(Integer.toString(count)), new Text(word));
+                }
+                ++ctr;
             }
         }
     }
@@ -138,6 +171,9 @@ public class topKCW {
         job2.setJarByClass(topKCW.class);
         job2.setMapperClass(SFMapper.class);
         job2.setReducerClass(SFReducer.class);
+        job2.setNumReduceTasks(1);
+        job2.setMapOutputKeyClass(IntWritable.class);
+        job2.setMapOutputValueClass(Text.class);
         job2.setOutputKeyClass(Text.class);
         job2.setOutputValueClass(Text.class);
         FileInputFormat.addInputPath(job2, new Path(tempDir));
